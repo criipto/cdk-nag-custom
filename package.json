@@ -1,6 +1,6 @@
 {
   "name": "@idura.eu/cdk-nag-custom",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "A collection of custom CDK nag rules used by Idura",
   "license": "MIT",
   "repository": {
