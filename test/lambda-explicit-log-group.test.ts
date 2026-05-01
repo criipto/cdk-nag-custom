@@ -1,6 +1,7 @@
 import { describe, it } from "vitest";
 import { App, Aspects, Stack } from "aws-cdk-lib";
 import { Annotations, Match } from "aws-cdk-lib/assertions";
+import { experimental } from "aws-cdk-lib/aws-cloudfront";
 import {
   Code,
   Function as LambdaFunction,
@@ -14,7 +15,9 @@ const RULE = "Idura-LambdaExplicitLogGroup";
 
 function synth(build: (stack: Stack) => void): Annotations {
   const app = new App();
-  const stack = new Stack(app, "TestStack");
+  const stack = new Stack(app, "TestStack", {
+    env: { account: "123456789012", region: "us-east-1" },
+  });
   build(stack);
   Aspects.of(stack).add(new IduraChecks());
   return Annotations.fromStack(stack);
@@ -48,6 +51,21 @@ describe("LambdaExplicitLogGroup", () => {
 
     annotations.hasError(
       "/TestStack/Fn/Resource",
+      Match.stringLikeRegexp(RULE),
+    );
+  });
+
+  it("does not flag a Lambda@Edge function (log groups cannot be configured)", () => {
+    const annotations = synth((stack) => {
+      new experimental.EdgeFunction(stack, "EdgeFn", {
+        runtime: Runtime.NODEJS_20_X,
+        handler: "index.handler",
+        code: Code.fromInline("exports.handler = async () => ({});"),
+      });
+    });
+
+    annotations.hasNoError(
+      "/TestStack/EdgeFn/Fn/Resource",
       Match.stringLikeRegexp(RULE),
     );
   });
