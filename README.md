@@ -13,7 +13,7 @@ Use `pnpm pack`, not `pnpm link`:
 pnpm build && pnpm pack
 
 # In the consumer project
-pnpm add /absolute/path/to/idura-cdk-nag-custom-x.y.z.tgz
+pnpm add /absolute/path/to/idura.eu-cdk-nag-custom-x.y.z.tgz
 ```
 
 `pnpm link` does not work reliably for this package. The rules use `instanceof CfnResource` / `instanceof CfnFunction` to identify resources, which compares class identity. When pnpm links a package, the linked package keeps its own copy of `aws-cdk-lib` in its `node_modules` — that's a different class object from the consumer's `aws-cdk-lib`, so `instanceof` returns `false` on every node and the rules silently no-op.
