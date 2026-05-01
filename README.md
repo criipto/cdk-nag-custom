@@ -2,6 +2,30 @@
 
 A collection of custom CDK nag rules used by Idura
 
+## Usage
+
+Add the pack as an aspect on the scope you want checked (typically the app or a specific stack), and call `applyIduraSuppressions` on the same scope to silence findings we've accepted as baseline org-wide:
+
+```ts
+import { App, Aspects } from "aws-cdk-lib";
+import { AwsSolutionsChecks } from "cdk-nag";
+import { IduraChecks, applyIduraSuppressions } from "@idura.eu/cdk-nag-custom";
+
+const app = new App();
+// ... define stacks ...
+
+Aspects.of(app).add(new AwsSolutionsChecks());
+Aspects.of(app).add(new IduraChecks());
+applyIduraSuppressions(app);
+```
+
+`applyIduraSuppressions` silences these `AwsSolutions` findings:
+
+- **`AwsSolutions-L1`** — Lambda runtime not latest. We pin Lambda runtimes to specific Node majors, validate against them before deploy, and keep up with deprecations on our own cadence.
+- **`AwsSolutions-IAM4`**, scoped via `appliesTo` to these AWS-managed policies: `AWSLambdaBasicExecutionRole`, `AWSLambdaVPCAccessExecutionRole`, `AmazonAPIGatewayPushToCloudWatchLogs`, `AWSXRayDaemonWriteAccess`. Each grants only the minimum privileges for its specific service-role purpose.
+
+If a stack needs additional suppressions, layer them with `NagSuppressions.addResourceSuppressions(...)` as usual — the helper does not preempt or replace anything.
+
 ## Local development
 
 ### Testing changes in a consumer project
