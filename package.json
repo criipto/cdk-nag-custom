@@ -1,11 +1,11 @@
 {
-  "name": "@idura/cdk-nag-custom",
+  "name": "@idura.eu/cdk-nag-custom",
   "version": "0.1.0",
   "description": "A collection of custom CDK nag rules used by Idura",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/idura/cdk-nag-custom.git"
+    "url": "git+https://github.com/criipto/cdk-nag-custom.git"
   },
   "type": "module",
   "main": "./dist/index.cjs",
