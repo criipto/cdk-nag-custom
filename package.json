@@ -5,7 +5,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/idura/cdk-nag-custom.git"
+    "url": "git+https://github.com/criipto/cdk-nag-custom.git"
   },
   "type": "module",
   "main": "./dist/index.cjs",
