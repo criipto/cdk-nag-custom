@@ -36,7 +36,8 @@
     "test:watch": "vitest",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "prepublishOnly": "pnpm build"
+    "prepublishOnly": "pnpm build",
+    "prepare": "husky"
   },
   "peerDependencies": {
     "aws-cdk-lib": "^2.0.0",
@@ -48,6 +49,7 @@
     "aws-cdk-lib": "^2.252.0",
     "cdk-nag": "^2.38.2",
     "constructs": "^10.6.0",
+    "husky": "^9.1.7",
     "prettier": "^3.8.3",
     "tsdown": "^0.21.10",
     "typescript": "^6.0.3",
