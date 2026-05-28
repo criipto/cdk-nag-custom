@@ -1,0 +1,18 @@
+#!/usr/bin/env sh
+
+protected_branch="master"
+zero="0000000000000000000000000000000000000000"
+
+while read -r local_ref local_sha remote_ref remote_sha; do
+  [ "$remote_ref" = "refs/heads/$protected_branch" ] || continue
+  [ "$local_sha" = "$zero" ] && continue
+
+  if git tag --points-at "$local_sha" | grep -qE '^v[0-9]+\.[0-9]+\.[0-9]+$'; then
+    continue
+  fi
+
+  printf '\033[31mDirect push to %s blocked by pre-push hook.\033[0m\n' "$protected_branch" >&2
+  printf 'Open a PR, or tag the commit (v*.*.*) for a release.\n' >&2
+  printf 'Override with --no-verify if you really mean it.\n' >&2
+  exit 1
+done
