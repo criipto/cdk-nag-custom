@@ -3,6 +3,7 @@ import type { IConstruct } from "constructs";
 import { NagMessageLevel, NagPack, type NagPackProps } from "cdk-nag";
 
 import lambdaExplicitLogGroup from "./rules/lambda/lambda-explicit-log-group";
+import durableFunctionRetainVersions from "./rules/lambda/durable-function-retain-versions";
 
 export class IduraChecks extends NagPack {
   constructor(props: NagPackProps = {}) {
@@ -20,6 +21,16 @@ export class IduraChecks extends NagPack {
         "Without an explicit log group, Lambda creates an implicit '/aws/lambda/<function-name>' log group on first invocation. That implicit log group is not part of the stack, so it is not deleted when the function is deleted, leaving an orphaned log group (and storage cost) behind. Pass a logs.LogGroup to the function's logGroup prop so the log group is part of the stack and gets cleaned up with the function.",
       level: NagMessageLevel.ERROR,
       rule: lambdaExplicitLogGroup,
+      node,
+    });
+
+    this.applyRule({
+      ruleSuffixOverride: "DurableLambdaRetainVersions",
+      info: "Durable functions must be configured to retain versions",
+      explanation:
+        "Without version retention, CDK will attempt to delete resources that it may not be allowed to, resulting in large delays",
+      level: NagMessageLevel.ERROR,
+      rule: durableFunctionRetainVersions,
       node,
     });
   }
