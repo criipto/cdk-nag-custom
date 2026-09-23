@@ -29,6 +29,16 @@ Lambda functions must reference an explicitly created CloudWatch log group via `
 
 A Lambda function with a `DurableConfig` must have at least one `AWS::Lambda::Version` pointing at it, and every such version must carry a `Retain` or `RetainExceptOnCreate` deletion policy. A version's logical id embeds a hash of the function config, so any change replaces the version resource — and deleting the outgoing version fails or stalls while durable executions are still running on it. Functions without a `DurableConfig` are not applicable.
 
+### `Idura-Route53UniqueRecordSet` (error)
+
+No two Route 53 record sets in the same stack (or its nested stacks) may address the same hosted zone, name, type and set identifier. CloudFormation provisions every `AWS::Route53::RecordSet` as an [UPSERT](https://docs.aws.amazon.com/Route53/latest/APIReference/API_ChangeResourceRecordSets.html), so a second record set at the same address updates the first instead of failing: the stack deploys green and only the last one written survives. The typical fix is one record set with several values (one `TxtRecord` with multiple entries in `values`) rather than several record sets. Records that intentionally share a name and type — weighted, latency, failover, geolocation, multivalue-answer — are exempt because Route 53 requires a distinct `SetIdentifier` for each.
+
+The finding names the conflicting record's construct path, so both halves of the collision are visible: `Idura-Route53UniqueRecordSet[MyStack/Verify2/Resource]`.
+
+Comparison covers a top-level stack together with all of its nested stacks — a nested stack deploys its own change set, but Route 53 has no such boundary, so an UPSERT from a nested stack overwrites an identically addressed record from its parent just the same. Records are therefore all resolved in the top-level stack's scope, because the same hosted zone reads as a different intrinsic in each template. Separate top-level stacks are deliberately not compared: a multi-stage app can legitimately repeat the same literal zone and record name once per stage.
+
+Because comparison uses resolved values, these collisions are **not** detected: records in two separate top-level stacks; a record addressing its zone by `hostedZoneId` colliding with one using `hostedZoneName`; and two structurally different tokens that happen to resolve to the same name at deploy time. Records declared inside a `CfnRecordSetGroup` are not checked at all — no CDK L2 emits one.
+
 ## Suppressions
 
 `applyIduraSuppressions` silences these `AwsSolutions` findings:

@@ -4,6 +4,7 @@ import { NagMessageLevel, NagPack, type NagPackProps } from "cdk-nag";
 
 import lambdaExplicitLogGroup from "./rules/lambda/lambda-explicit-log-group";
 import durableFunctionRetainVersions from "./rules/lambda/durable-function-retain-versions";
+import route53UniqueRecordSet from "./rules/route53/route53-unique-record-set";
 
 export class IduraChecks extends NagPack {
   constructor(props: NagPackProps = {}) {
@@ -31,6 +32,16 @@ export class IduraChecks extends NagPack {
         "Without version retention, CDK will attempt to delete resources that it may not be allowed to, resulting in large delays",
       level: NagMessageLevel.ERROR,
       rule: durableFunctionRetainVersions,
+      node,
+    });
+
+    this.applyRule({
+      ruleSuffixOverride: "Route53UniqueRecordSet",
+      info: "Two Route 53 record sets in the same stack (or its nested stacks) address the same hosted zone, name, type and set identifier.",
+      explanation:
+        "CloudFormation provisions every AWS::Route53::RecordSet as an UPSERT, so Route 53 updates the existing record instead of rejecting the second one. Neither resource fails and the stack deploys green, but only the last record set written survives — the other's values are silently lost. Merge the records into a single record set with multiple values (for example one TxtRecord with several entries in 'values'), give them distinct names, or, if they are intentionally part of a weighted/latency/failover/geolocation group, set a distinct setIdentifier on each.",
+      level: NagMessageLevel.ERROR,
+      rule: route53UniqueRecordSet,
       node,
     });
   }
