@@ -19,6 +19,18 @@ Aspects.of(app).add(new IduraChecks());
 applyIduraSuppressions(app);
 ```
 
+## Rules
+
+### `Idura-LambdaExplicitLogGroup` (error)
+
+Lambda functions must reference an explicitly created CloudWatch log group via `LoggingConfig.LogGroup`. Without one, Lambda creates an implicit `/aws/lambda/<function-name>` log group on first invocation that is not part of the stack, so it outlives the function and keeps costing storage. Framework-managed lambdas (`SingletonFunction`-backed helpers such as `AwsCustomResource` and `BucketDeployment`) and Lambda@Edge functions are exempt.
+
+### `Idura-DurableLambdaRetainVersions` (error)
+
+A Lambda function with a `DurableConfig` must have at least one `AWS::Lambda::Version` pointing at it, and every such version must carry a `Retain` or `RetainExceptOnCreate` deletion policy. A version's logical id embeds a hash of the function config, so any change replaces the version resource — and deleting the outgoing version fails or stalls while durable executions are still running on it. Functions without a `DurableConfig` are not applicable.
+
+## Suppressions
+
 `applyIduraSuppressions` silences these `AwsSolutions` findings:
 
 - **`AwsSolutions-L1`** — Lambda runtime not latest. We pin Lambda runtimes to specific Node majors, validate against them before deploy, and keep up with deprecations on our own cadence.
