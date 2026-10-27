@@ -36,7 +36,7 @@ describe("applyIduraSuppressions", () => {
     const findings = makeStack({ applySuppressions: false });
     findings.hasError(
       "/TestStack/Fn/ServiceRole/Resource",
-      "AwsSolutions-IAM4",
+      "AwsSolutions-IAM4\\[.*AWSLambdaBasicExecutionRole\\]",
     );
   });
 
