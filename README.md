@@ -4,20 +4,24 @@ A collection of custom CDK nag rules used by Idura
 
 ## Usage
 
-Add the pack as an aspect on the scope you want checked (typically the app or a specific stack), and call `applyIduraSuppressions` on the same scope to silence findings we've accepted as baseline org-wide:
+Register the pack as a policy validation plugin on the app (plugins can only be added to an `App` or `Stage`), and call `applyIduraSuppressions` on the scope whose findings we've accepted as baseline org-wide:
 
 ```ts
-import { App, Aspects } from "aws-cdk-lib";
+import { App, Validations } from "aws-cdk-lib";
 import { AwsSolutionsChecks } from "cdk-nag";
 import { IduraChecks, applyIduraSuppressions } from "@idura.eu/cdk-nag-custom";
 
 const app = new App();
 // ... define stacks ...
 
-Aspects.of(app).add(new AwsSolutionsChecks());
-Aspects.of(app).add(new IduraChecks());
+Validations.of(app).addPlugins(
+  new AwsSolutionsChecks(app),
+  new IduraChecks(app),
+);
 applyIduraSuppressions(app);
 ```
+
+Violations fail `cdk synth` and are written to `validation-report.json` in the cloud assembly.
 
 ## Rules
 
@@ -44,9 +48,9 @@ Because comparison uses resolved values, these collisions are **not** detected: 
 `applyIduraSuppressions` silences these `AwsSolutions` findings:
 
 - **`AwsSolutions-L1`** — Lambda runtime not latest. We pin Lambda runtimes to specific Node majors, validate against them before deploy, and keep up with deprecations on our own cadence.
-- **`AwsSolutions-IAM4`**, scoped via `appliesTo` to these AWS-managed policies: `AWSLambdaBasicExecutionRole`, `AWSLambdaVPCAccessExecutionRole`, `AmazonAPIGatewayPushToCloudWatchLogs`, `AWSXRayDaemonWriteAccess`. Each grants only the minimum privileges for its specific service-role purpose.
+- **`AwsSolutions-IAM4`**, scoped to these AWS-managed policies (acknowledged as `AwsSolutions-IAM4[Policy::arn:<AWS::Partition>:iam::aws:policy/...]`): `AWSLambdaBasicExecutionRole`, `AWSLambdaVPCAccessExecutionRole`, `AmazonAPIGatewayPushToCloudWatchLogs`, `AWSXRayDaemonWriteAccess`. Each grants only the minimum privileges for its specific service-role purpose.
 
-If a stack needs additional suppressions, layer them with `NagSuppressions.addResourceSuppressions(...)` as usual — the helper does not preempt or replace anything.
+Acknowledgments are inherited, so these apply to every resource beneath the scope you pass. If a stack needs additional suppressions, layer them with `Validations.of(construct).acknowledge({ id, reason })` as usual — the helper does not preempt or replace anything. The same mechanism acknowledges the `Idura-*` rules, e.g. `Validations.of(fn).acknowledge({ id: "Idura-LambdaExplicitLogGroup", reason: "..." })`.
 
 ## Local development
 
