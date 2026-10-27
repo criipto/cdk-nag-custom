@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { App, Aspects, CustomResource, Stack } from "aws-cdk-lib";
-import { Annotations, Match } from "aws-cdk-lib/assertions";
+import { App, CustomResource, Stack } from "aws-cdk-lib";
 import { experimental } from "aws-cdk-lib/aws-cloudfront";
 import {
   Code,
@@ -10,20 +9,25 @@ import {
 import { LogGroup, RetentionDays } from "aws-cdk-lib/aws-logs";
 import { Bucket } from "aws-cdk-lib/aws-s3";
 import { BucketDeployment, Source } from "aws-cdk-lib/aws-s3-deployment";
-import { AwsCustomResource, AwsCustomResourcePolicy, PhysicalResourceId, Provider } from "aws-cdk-lib/custom-resources";
+import {
+  AwsCustomResource,
+  AwsCustomResourcePolicy,
+  PhysicalResourceId,
+  Provider,
+} from "aws-cdk-lib/custom-resources";
 
 import { IduraChecks } from "../src/pack";
+import { NagFindings } from "./nag";
 
 const RULE = "Idura-LambdaExplicitLogGroup";
 
-function synth(build: (stack: Stack) => void): Annotations {
+function synth(build: (stack: Stack) => void): NagFindings {
   const app = new App();
   const stack = new Stack(app, "TestStack", {
     env: { account: "123456789012", region: "us-east-1" },
   });
   build(stack);
-  Aspects.of(stack).add(new IduraChecks());
-  return Annotations.fromStack(stack);
+  return NagFindings.of(stack, new IduraChecks());
 }
 
 describe("LambdaExplicitLogGroup", () => {
@@ -36,10 +40,7 @@ describe("LambdaExplicitLogGroup", () => {
       });
     });
 
-    annotations.hasError(
-      "/TestStack/Fn/Resource",
-      Match.stringLikeRegexp(RULE),
-    );
+    annotations.hasError("/TestStack/Fn/Resource", RULE);
   });
 
   it("still flags a Lambda that only sets logRetention (no explicit logGroup)", () => {
@@ -52,10 +53,7 @@ describe("LambdaExplicitLogGroup", () => {
       });
     });
 
-    annotations.hasError(
-      "/TestStack/Fn/Resource",
-      Match.stringLikeRegexp(RULE),
-    );
+    annotations.hasError("/TestStack/Fn/Resource", RULE);
   });
 
   it("does not flag a Lambda@Edge function (log groups cannot be configured)", () => {
@@ -67,10 +65,7 @@ describe("LambdaExplicitLogGroup", () => {
       });
     });
 
-    annotations.hasNoError(
-      "/TestStack/EdgeFn/Fn/Resource",
-      Match.stringLikeRegexp(RULE),
-    );
+    annotations.hasNoError("/TestStack/EdgeFn/Fn/Resource", RULE);
   });
 
   // Provider creates its own framework-onEvent Lambda wrapping the user's
@@ -87,13 +82,17 @@ describe("LambdaExplicitLogGroup", () => {
           logGroupName: "/aws/lambda/on-event",
         }),
       });
-      const provider = new Provider(stack, "Provider", { onEventHandler: onEvent });
-      new CustomResource(stack, "Resource", { serviceToken: provider.serviceToken });
+      const provider = new Provider(stack, "Provider", {
+        onEventHandler: onEvent,
+      });
+      new CustomResource(stack, "Resource", {
+        serviceToken: provider.serviceToken,
+      });
     });
 
     annotations.hasError(
       "/TestStack/Provider/framework-onEvent/Resource",
-      Match.stringLikeRegexp(RULE),
+      RULE,
     );
   });
 
@@ -111,7 +110,7 @@ describe("LambdaExplicitLogGroup", () => {
       });
     });
 
-    const errors = annotations.findError("*", Match.stringLikeRegexp(RULE));
+    const errors = annotations.findError("*", RULE);
     expect(errors).toHaveLength(0);
   });
 
@@ -124,7 +123,7 @@ describe("LambdaExplicitLogGroup", () => {
       });
     });
 
-    const errors = annotations.findError("*", Match.stringLikeRegexp(RULE));
+    const errors = annotations.findError("*", RULE);
     expect(errors).toHaveLength(0);
   });
 
@@ -141,9 +140,6 @@ describe("LambdaExplicitLogGroup", () => {
       });
     });
 
-    annotations.hasNoError(
-      "/TestStack/Fn/Resource",
-      Match.stringLikeRegexp(RULE),
-    );
+    annotations.hasNoError("/TestStack/Fn/Resource", RULE);
   });
 });

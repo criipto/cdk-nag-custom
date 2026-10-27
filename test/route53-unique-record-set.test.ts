@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { App, Aspects, NestedStack, Stack } from "aws-cdk-lib";
-import { Annotations, Match } from "aws-cdk-lib/assertions";
+import { App, NestedStack, Stack } from "aws-cdk-lib";
 import {
   AaaaRecord,
   ARecord,
@@ -11,17 +10,17 @@ import {
 } from "aws-cdk-lib/aws-route53";
 
 import { IduraChecks } from "../src/pack";
+import { NagFindings } from "./nag";
 
 const RULE = "Idura-Route53UniqueRecordSet";
 
-function synth(build: (stack: Stack) => void): Annotations {
+function synth(build: (stack: Stack) => void): NagFindings {
   const app = new App();
   const stack = new Stack(app, "TestStack", {
     env: { account: "123456789012", region: "eu-west-1" },
   });
   build(stack);
-  Aspects.of(stack).add(new IduraChecks());
-  return Annotations.fromStack(stack);
+  return NagFindings.of(stack, new IduraChecks());
 }
 
 function zoneOf(stack: Stack, id = "Zone", hostedZoneId = "Z123") {
@@ -47,14 +46,8 @@ describe("Route53UniqueRecordSet", () => {
       });
     });
 
-    annotations.hasError(
-      "/TestStack/Verify1/Resource",
-      Match.stringLikeRegexp(RULE),
-    );
-    annotations.hasError(
-      "/TestStack/Verify2/Resource",
-      Match.stringLikeRegexp(RULE),
-    );
+    annotations.hasError("/TestStack/Verify1/Resource", RULE);
+    annotations.hasError("/TestStack/Verify2/Resource", RULE);
   });
 
   it("names the conflicting record in the finding", () => {
@@ -74,7 +67,7 @@ describe("Route53UniqueRecordSet", () => {
 
     annotations.hasError(
       "/TestStack/Verify1/Resource",
-      Match.stringLikeRegexp("TestStack/Verify2/Resource"),
+      "TestStack/Verify2/Resource",
     );
   });
 
@@ -89,9 +82,7 @@ describe("Route53UniqueRecordSet", () => {
       });
     });
 
-    expect(
-      annotations.findError("*", Match.stringLikeRegexp(RULE)),
-    ).toHaveLength(0);
+    expect(annotations.findError("*", RULE)).toHaveLength(0);
   });
 
   it("does not flag an A and an AAAA record at the same name", () => {
@@ -107,9 +98,7 @@ describe("Route53UniqueRecordSet", () => {
       });
     });
 
-    expect(
-      annotations.findError("*", Match.stringLikeRegexp(RULE)),
-    ).toHaveLength(0);
+    expect(annotations.findError("*", RULE)).toHaveLength(0);
   });
 
   it("flags names that differ only by trailing dot and case", () => {
@@ -130,8 +119,8 @@ describe("Route53UniqueRecordSet", () => {
       });
     });
 
-    annotations.hasError("/TestStack/Raw1", Match.stringLikeRegexp(RULE));
-    annotations.hasError("/TestStack/Raw2", Match.stringLikeRegexp(RULE));
+    annotations.hasError("/TestStack/Raw1", RULE);
+    annotations.hasError("/TestStack/Raw2", RULE);
   });
 
   it("does not flag a weighted group distinguished by setIdentifier", () => {
@@ -151,9 +140,7 @@ describe("Route53UniqueRecordSet", () => {
       });
     });
 
-    expect(
-      annotations.findError("*", Match.stringLikeRegexp(RULE)),
-    ).toHaveLength(0);
+    expect(annotations.findError("*", RULE)).toHaveLength(0);
   });
 
   it("does not flag the same record name in two different hosted zones", () => {
@@ -172,9 +159,7 @@ describe("Route53UniqueRecordSet", () => {
       });
     });
 
-    expect(
-      annotations.findError("*", Match.stringLikeRegexp(RULE)),
-    ).toHaveLength(0);
+    expect(annotations.findError("*", RULE)).toHaveLength(0);
   });
 
   // A nested stack is not its own cloud assembly artifact, so findings on its
@@ -189,11 +174,11 @@ describe("Route53UniqueRecordSet", () => {
 
     annotations.hasError(
       "/TestStack/TxtSpf/Resource",
-      Match.stringLikeRegexp("TestStack/Nested/NoMailSpf/Resource"),
+      "TestStack/Nested/NoMailSpf/Resource",
     );
     annotations.hasError(
       "/TestStack/Nested/NoMailSpf/Resource",
-      Match.stringLikeRegexp("TestStack/TxtSpf/Resource"),
+      "TestStack/TxtSpf/Resource",
     );
   });
 
@@ -212,11 +197,11 @@ describe("Route53UniqueRecordSet", () => {
 
     annotations.hasError(
       "/TestStack/Left/Spf/Resource",
-      Match.stringLikeRegexp("TestStack/Right/Spf/Resource"),
+      "TestStack/Right/Spf/Resource",
     );
     annotations.hasError(
       "/TestStack/Right/Spf/Resource",
-      Match.stringLikeRegexp("TestStack/Left/Spf/Resource"),
+      "TestStack/Left/Spf/Resource",
     );
   });
 
@@ -237,15 +222,13 @@ describe("Route53UniqueRecordSet", () => {
       new TxtRecord(nested, "OwnSpf", { zone: ownZone, values: ["token-b"] });
     });
 
-    expect(
-      annotations.findError("*", Match.stringLikeRegexp(RULE)),
-    ).toHaveLength(0);
+    expect(annotations.findError("*", RULE)).toHaveLength(0);
   });
 
   it("does not compare records across separate top-level stacks", () => {
     const app = new App();
     const env = { account: "123456789012", region: "eu-west-1" };
-    const stacks = ["StageA", "StageB"].map((id) => {
+    for (const id of ["StageA", "StageB"]) {
       const stack = new Stack(app, id, { env });
       new CfnRecordSet(stack, "Spf", {
         hostedZoneId: "Z123",
@@ -254,18 +237,11 @@ describe("Route53UniqueRecordSet", () => {
         ttl: "300",
         resourceRecords: ['"v=spf1 -all"'],
       });
-      return stack;
-    });
-    Aspects.of(app).add(new IduraChecks());
-
-    for (const stack of stacks) {
-      expect(
-        Annotations.fromStack(stack).findError(
-          "*",
-          Match.stringLikeRegexp(RULE),
-        ),
-      ).toHaveLength(0);
     }
+
+    expect(
+      NagFindings.of(app, new IduraChecks()).findError("*", RULE),
+    ).toHaveLength(0);
   });
 
   it("flags duplicates whose zone is referenced through the same token", () => {
@@ -283,13 +259,7 @@ describe("Route53UniqueRecordSet", () => {
       });
     });
 
-    annotations.hasError(
-      "/TestStack/Verify1/Resource",
-      Match.stringLikeRegexp(RULE),
-    );
-    annotations.hasError(
-      "/TestStack/Verify2/Resource",
-      Match.stringLikeRegexp(RULE),
-    );
+    annotations.hasError("/TestStack/Verify1/Resource", RULE);
+    annotations.hasError("/TestStack/Verify2/Resource", RULE);
   });
 });
