@@ -1,0 +1,14 @@
+blockExoticSubdeps: true
+
+minimumReleaseAge: 5760 # 4 days in minutes
+# If you need to install a newer version of a package immediately,
+# you can add the package name and version here
+minimumReleaseAgeExclude:
+  - "@criipto/*" # Allow criipto-published packages to be installed with no delay
+  - "@idura.eu/*" # Allow idura-published packages to be installed with no delay
+
+trustPolicy: no-downgrade
+# If you really, really need to install a version of a package that has
+# stopped using a trusted publisher, you can add the package name and version
+# here
+trustPolicyExclude: []
