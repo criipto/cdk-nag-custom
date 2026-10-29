@@ -1,4 +1,4 @@
-import { CfnResource } from "aws-cdk-lib";
+import type { CfnResource } from "aws-cdk-lib";
 import type { IConstruct } from "constructs";
 import { NagMessageLevel, NagPack, type NagPackProps } from "cdk-nag";
 
@@ -7,14 +7,14 @@ import durableFunctionRetainVersions from "./rules/lambda/durable-function-retai
 import route53UniqueRecordSet from "./rules/route53/route53-unique-record-set";
 
 export class IduraChecks extends NagPack {
-  constructor(props: NagPackProps = {}) {
-    super(props);
+  public readonly name = "Idura";
+
+  constructor(scope?: IConstruct, props?: NagPackProps) {
+    super(scope, props);
     this.packName = "Idura";
   }
 
-  override visit(node: IConstruct): void {
-    if (!(node instanceof CfnResource)) return;
-
+  protected override checkResource(node: CfnResource): void {
     this.applyRule({
       ruleSuffixOverride: "LambdaExplicitLogGroup",
       info: "Lambda functions must reference an explicitly created CloudWatch log group via LoggingConfig.LogGroup.",

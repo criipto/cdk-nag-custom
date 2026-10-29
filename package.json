@@ -40,14 +40,14 @@
     "prepare": "husky"
   },
   "peerDependencies": {
-    "aws-cdk-lib": "^2.0.0",
-    "cdk-nag": "^2.0.0",
+    "aws-cdk-lib": "^2.257.0",
+    "cdk-nag": "^3.0.0",
     "constructs": "^10.0.0"
   },
   "devDependencies": {
     "@types/node": "^24.0.0",
-    "aws-cdk-lib": "^2.252.0",
-    "cdk-nag": "^2.38.2",
+    "aws-cdk-lib": "^2.274.0",
+    "cdk-nag": "^3.0.2",
     "constructs": "^10.6.0",
     "husky": "^9.1.7",
     "prettier": "^3.8.3",

@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { App, Aspects, Duration, RemovalPolicy, Stack } from "aws-cdk-lib";
-import { Annotations, Match } from "aws-cdk-lib/assertions";
+import { App, Duration, RemovalPolicy, Stack } from "aws-cdk-lib";
 import {
   Code,
   Function as LambdaFunction,
@@ -9,17 +8,17 @@ import {
 } from "aws-cdk-lib/aws-lambda";
 
 import { IduraChecks } from "../src/pack";
+import { NagFindings } from "./nag";
 
 const RULE = "Idura-DurableLambdaRetainVersions";
 
-function synth(build: (stack: Stack) => void): Annotations {
+function synth(build: (stack: Stack) => void): NagFindings {
   const app = new App();
   const stack = new Stack(app, "TestStack", {
     env: { account: "123456789012", region: "us-east-1" },
   });
   build(stack);
-  Aspects.of(stack).add(new IduraChecks());
-  return Annotations.fromStack(stack);
+  return NagFindings.of(stack, new IduraChecks());
 }
 
 describe("DurableLambdaRetainVersions", () => {
@@ -35,10 +34,7 @@ describe("DurableLambdaRetainVersions", () => {
       });
     });
 
-    annotations.hasError(
-      "/TestStack/Fn/Resource",
-      Match.stringLikeRegexp(RULE),
-    );
+    annotations.hasError("/TestStack/Fn/Resource", RULE);
   });
 
   it("passes when the Lambda is configured to retain versions", () => {
@@ -57,10 +53,7 @@ describe("DurableLambdaRetainVersions", () => {
       node.currentVersion.functionArn;
     });
 
-    annotations.hasNoError(
-      "/TestStack/Fn/Resource",
-      Match.stringLikeRegexp(RULE),
-    );
+    annotations.hasNoError("/TestStack/Fn/Resource", RULE);
   });
 
   it("passes when the Lambda is does not have durable config", () => {
@@ -72,10 +65,7 @@ describe("DurableLambdaRetainVersions", () => {
       });
     });
 
-    annotations.hasNoError(
-      "/TestStack/Fn/Resource",
-      Match.stringLikeRegexp(RULE),
-    );
+    annotations.hasNoError("/TestStack/Fn/Resource", RULE);
   });
   it("flags a durable Lambda whose current version is not retained", () => {
     const annotations = synth((stack) => {
@@ -90,10 +80,7 @@ describe("DurableLambdaRetainVersions", () => {
       fn.currentVersion.functionArn;
     });
 
-    annotations.hasError(
-      "/TestStack/Fn/Resource",
-      Match.stringLikeRegexp(RULE),
-    );
+    annotations.hasError("/TestStack/Fn/Resource", RULE);
   });
 
   it("passes when a retained standalone version points at the function", () => {
@@ -110,10 +97,7 @@ describe("DurableLambdaRetainVersions", () => {
       version.applyRemovalPolicy(RemovalPolicy.RETAIN);
     });
 
-    annotations.hasNoError(
-      "/TestStack/Fn/Resource",
-      Match.stringLikeRegexp(RULE),
-    );
+    annotations.hasNoError("/TestStack/Fn/Resource", RULE);
   });
 
   it("ignores a non-durable Lambda without a retained version", () => {
@@ -126,9 +110,6 @@ describe("DurableLambdaRetainVersions", () => {
       fn.currentVersion.functionArn;
     });
 
-    annotations.hasNoError(
-      "/TestStack/Fn/Resource",
-      Match.stringLikeRegexp(RULE),
-    );
+    annotations.hasNoError("/TestStack/Fn/Resource", RULE);
   });
 });
